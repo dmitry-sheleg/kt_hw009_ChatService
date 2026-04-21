@@ -65,9 +65,9 @@ class ChatService {
     private val chats = mutableMapOf<Int, Chat>()
 
     // Получаем количество чатов с непрочитанными сообщениями
-    // используем цепочку lambda‑функций без явных циклов
     fun getUnreadChatsCount(): Int {
-        return chats.values.count { it.hasUnreadMessages() }
+        return chats.values
+            .count { it.hasUnreadMessages() }
     }
 
     // Получаем полный список всех чатов пользователя
@@ -79,16 +79,17 @@ class ChatService {
     // Чаты сортируются по времени последнего сообщения (новые сверху)
     // Если в чате нет сообщений, возвращаем «нет сообщений»
     fun getLastMessagesFromAllChats(): List<String> {
-        return chats.values
+        return chats.values.asSequence()
+            .filter { it.messages.isNotEmpty() }
             .sortedByDescending { it.messages.lastOrNull()?.timestamp ?: 0 }
             .map { it.getLastMessageText() }
+            .toList()
     }
 
     // Получаем последние сообщения из конкретного чата
     // После вызова все полученные сообщения автоматически помечаются как прочитанные
     fun getMessagesFromChat(withUserId: Int, count: Int): List<Message> {
-        val chat = chats[withUserId] ?: return emptyList()
-        return chat.getLastMessages(count)
+        return chats[withUserId]?.getLastMessages(count) ?: emptyList()
     }
 
     // Создаём новое сообщение и добавляем его в соответствующий чат
@@ -112,10 +113,12 @@ class ChatService {
 
     // Удаляем сообщение из указанного чата
     fun deleteMessage(withUserId: Int, messageId: Int): Boolean {
-        if (!chats.containsKey(withUserId)) {
-            throw ChatNotFoundException("Chat with user ID $withUserId not found")
-        }
-        return chats[withUserId]?.removeMessage(messageId) ?: false
+        val chat = chats[withUserId] ?: throw ChatNotFoundException("Chat with user ID $withUserId not found")
+
+        return chat.messages.any { it.id == messageId } // проверяем, есть ли такое сообщение
+            .also {
+                if (it) chat.removeMessage(messageId) // удаляем, если найдено
+            }
     }
 
     // Создаём новый чат с указанным пользователем
@@ -139,16 +142,15 @@ class ChatService {
 
     // Собираем статистику по чатам с использованием цепочки lambda‑вызовов
     fun getChatStatistics(): Map<String, Any> {
-        return chats.values.fold(mutableMapOf()) { acc, chat ->
-            acc.apply {
-                this["totalChats"] = chats.size
-                this["chatsWithUnread"] = getUnreadChatsCount()
-                this["totalMessages"] = chats.values.sumOf { it.messages.size }
-                this["unreadMessages"] = chats.values.sumOf { chat ->
-                    chat.messages.count { !it.isRead }
-                }
-            }
-        }
+        val chatsSeq = chats.values.asSequence()
+
+        return mapOf(
+            "totalChats" to chats.size,
+            "chatsWithUnread" to getUnreadChatsCount(),
+            "totalMessages" to chatsSeq.sumOf { it.messages.size },
+            "unreadMessages" to chatsSeq
+                .flatMap { it.messages.asSequence() }.count { !it.isRead }
+        )
     }
 }
 
