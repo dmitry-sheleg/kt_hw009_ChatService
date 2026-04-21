@@ -77,7 +77,7 @@ class ChatService {
 
     // Получаем список последних сообщений из всех чатов
     // Чаты сортируются по времени последнего сообщения (новые сверху)
-    // Если в чате нет сообщений, возвращаем «нет сообщений»
+    // Если в чате нет сообщений - они отфильтруются
     fun getLastMessagesFromAllChats(): List<String> {
         return chats.values.asSequence()
             .filter { it.messages.isNotEmpty() }
@@ -86,8 +86,9 @@ class ChatService {
             .toList()
     }
 
-    // Получаем последние сообщения из конкретного чата
-    // После вызова все полученные сообщения автоматически помечаются как прочитанные
+    // Получаем последние N сообщений из чата с указанным пользователем.
+    // Если чат не существует, возвращаем пустой список.
+    // Все полученные сообщения автоматически помечаются как прочитанные
     fun getMessagesFromChat(withUserId: Int, count: Int): List<Message> {
         return chats[withUserId]?.getLastMessages(count) ?: emptyList()
     }
@@ -140,7 +141,11 @@ class ChatService {
         }
     }
 
-    // Собираем статистику по чатам с использованием цепочки lambda‑вызовов
+    // Собираем и возвращаем статистику по чатам:
+    // - totalChats: общее количество чатов;
+    // - chatsWithUnread: количество чатов с непрочитанными сообщениями;
+    // - totalMessages: общее количество сообщений во всех чатах;
+    // - unreadMessages: количество непрочитанных сообщений во всех чатах.
     fun getChatStatistics(): Map<String, Any> {
         val chatsSeq = chats.values.asSequence()
 
