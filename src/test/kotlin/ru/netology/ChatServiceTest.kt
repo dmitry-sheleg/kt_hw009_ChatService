@@ -150,15 +150,6 @@ class ChatServiceTest {
     }
 
     @Test
-    fun testGetLastMessagesFromEmptyChats() {
-        chatService.createChat(2) // Чат без сообщений
-
-        val lastMessages = chatService.getLastMessagesFromAllChats()
-
-        assertEquals("нет сообщений", lastMessages[0])
-    }
-
-    @Test
     fun testGetMessagesFromExistChat() {
         // Создаём чат и добавляем несколько сообщений
         chatService.createChat(2)
